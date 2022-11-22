@@ -1,0 +1,1163 @@
+---
+title: "BuffetOfLitters_Analyses"
+author: "Regine Victoria Holt"
+date: "21.11.2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Background
+
+
+### Method
+
+Data is collected from two consecutive flocks of Ross 308 broiler chickens, each flock had around 17,000 chickens from the same hatchery. The chickens were kept until they were 34 days old. 
+
+The chickens were raised on coarse peat litter, a highly preferred litter material for both dustbathing and foraging, thus the birds did not have to go into litter trays to dustbathe or forage on preferred substrate (even though the litter was coarse).
+
+Two sets of seven adjacent 1 m^2 litter trays (“litter buffets”) were located at opposite ends of the house between the water and feeder lines.
+
+Within a buffet, each litter tray contained a different litter type. The order of litter types varied randomly across buffets and flocks.
+
+
+The seven litters types were:
+
+- Peat: Fine-grained peat
+
+- Mixed peat: 70 % fine-grained peat with 30 % sawdust
+
+- Wood shavings: Dried wood shavings
+
+- Bark: Dried sanitary bark, finely-cut
+
+- Pellets: Pelleted oat straw and ground oat hulls
+
+- Coarse straw: Coarsely-crushed, heat-treated rape straw
+
+- Fine straw: Finely-ground, heat-treated, rape straw
+
+
+The chickens had continuous access to the buffets from the first week of age. The trays were top dressed with fresh litter material only during observations.
+
+
+Direct observations (Behavioural data):
+
+We observed the chickens once weekly over four weeks for 31.5 min before and 31.5 min after 5 L of fresh substrate was added to each litter tray. Trays within buffets were observed in a pre-determined balanced order. Each litter buffet was observed by an observer at the same time.
+
+Each tray observation started with an instantaneous scan of the total number of birds in the tray and the number lying. This was followed by a 15-s 1-0 scan to determine the numbers of ground scratching and dustbathing birds. Every 45 s, the observer slowly moved over and scanned the next tray on the list, continuing until 6 scans/litter type had been completed.
+
+The fresh litter was then poured into each tray (from pre-prepared containers placed nearby) and the sampling procedure was repeated. 
+
+Prior to statistical analysis, the mean number of birds dustbathing was subtracted from the number lying per scan to get the number lying resting.
+
+
+Ethogram:
+
+- Ground scratching: While standing, bird performs unilateral kicking movements with a foot, raking the substrate backwards with toes and claws. Usually repeated with alternating legs.
+
+- Dustbathing: While lying, bird rapidly lifting wings up and down multiple times while holding them close to body and scooping loose litter up into feathers (vertical wing shaking). May be accompanied by raking movements of feet in litter while lying. Bird may also be seen lying on side of body with legs stretched out and feathers flat but containing dust (side lying).
+
+- Lying resting: Bird lies with body resting on litter inside a tray. Legs are not supporting weight. Legs can be underneath body or stretched out. Excludes dustbathing birds.
+
+- Total birds: Number of birds with at least one foot in contact with litter in a tray.
+
+
+Litter composition (Litter composition data):
+
+At the end of the experiment, samples of used litter were collected from surface to floor in the centre of each litter tray (approximately 250 g/litter type) for comparison of particle size distribution with corresponding fresh litter samples taken from the product container.
+
+We passed three 50-g samples of each litter material in each freshness condition through a stack of eight sieves with progressively smaller holes (5.6 mm to 0.2 mm diameter), to determine the amount in each of the resulting nine fractions and mean fraction weight across the nine fractions.
+
+We then collated the data into three particle size fractions to determine the proportion of small, medium and large particles in each sample 
+
+- Small particles: ≤ 1.0 mm
+
+- Medium particles: 1.1-3.6 mm
+
+- Large particles: > 3.6 mm
+
+
+
+### Hypotheses and predictions
+
+We hypothesised that chickens would benefit from access to more than one litter type, and periodic refreshment of litter materials, due to differences in litter composition and, therefore, functional value for different litter-directed behaviours.
+
+
+This was examined by quantifying the overall number of chickens in the litter materials and three litter-directed behaviours: 
+
+- Ground scratching
+
+- Dustbathing
+
+- Lying resting
+
+- Total
+
+
+Predictions:
+
+- The number of birds using the different litter types would vary depending on the behaviour displayed and the freshness condition of the litter materials
+
+- How birds would trade off a predicted preference for the cleanliness of fresh litter with a predicted preference for more broken-down (used) litter having smaller particle sizes was unclear
+
+- Thus, it is likely an interactions between litter type and freshness depending on the behaviour
+
+
+### Further details
+
+For further details on how the data was collected, please, see the paper "A buffet of litters - Broiler chickens behave differently according to litter type and freshness" in Applied Animal Behaviour Science (submitted for review 22.11.2022). 
+
+
+## Importing behaviour dataset 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(readxl)     #Read excel-files
+library(openxlsx)   #Create excel files
+library(tidyverse)  #Time without date, ggplot2, dplyr
+```
+
+```{r}
+#Importing Behaviour data
+Beh <- read_excel("BuffetOfLitters_Datasets.xlsx", sheet = "Behaviour", na = ".")
+
+#Specifying variables
+Beh$Flock <- factor(Beh$Flock, levels = c("1", "2"))
+Beh$Days <- as.numeric(Beh$Days)
+Beh$Weeks <- as.numeric(Beh$Weeks)
+Beh$Buffet <- factor(Beh$Buffet, levels = c("A", "B"))
+Beh$LitterType <- factor(Beh$LitterType, levels = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"))
+Beh$Freshness <- factor(Beh$Freshness, levels = c("Used", "Fresh"))
+Beh$Total <- as.numeric(Beh$Total)
+Beh$Stand <- as.numeric(Beh$Stand)
+Beh$Lie <- as.numeric(Beh$Lie)
+Beh$DustB <- as.numeric(Beh$DustB)
+Beh$GrScrat <- as.numeric(Beh$GrScrat)
+```
+
+
+## Analysis of behavioural data
+
+AIC and diagnostic plots (using DHARMa package) were used for model selection.
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(car)       #for Anova-function
+library(DHARMa)    #Residual Diagnostics for Mixed Models (e.g. over- and under dispersion and zero-inflation) both tests and plots
+library(lme4)      #Recommended for mixed models 
+library(lmerTest)  #Provide p-values for lme4
+library(emmeans)   #Get least squares means, pairwise comparisons and CI
+```
+
+
+### Ground Scratch
+
+Response variable: GrScrat (= Ground scratch)
+
+
+Explanatory variables:
+
+- LitterType*Freshness  --> Not significant removed from final model
+
+- LitterType
+
+- Freshness
+
+- Weeks (= age)
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+
+```{r}
+#Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+GrScrat1 <- glmer.nb(GrScrat ~ LitterType + Freshness + Weeks + (1|Flock:Buffet), data = Beh)
+summary(GrScrat1)
+
+#ANOVA to find overall effects of LitterType and Freshness(car package)
+Anova(GrScrat1, type ="II") #Recommended for GLMM (and ML)
+
+#Post hoc comparisons (emmeans package)
+emmeans(GrScrat1, list(c(pairwise ~ LitterType, pairwise ~ Freshness)), type = "response") 
+```
+```{r}
+#Diagnostic plots using DHARMa package
+GrScrat1.ressim <-simulateResiduals(GrScrat1)
+plot(GrScrat1.ressim)
+```
+
+
+### Dustbathing
+
+Response variable: DustB (= Dustbathing)
+
+
+Explanatory variables:
+
+- LitterType*Freshness
+
+- LitterType
+
+- Freshness
+
+- Weeks (= age)
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+
+```{r}
+#Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+DustB1 <- glmer.nb(DustB ~ LitterType*Freshness + Weeks + (1|Flock:Buffet), data = Beh)
+summary(DustB1)
+
+#ANOVA to find overall effects of LitterType*Freshness, LitterType and Freshness (car package)
+Anova(DustB1, type ="III") #Recommended for GLMM (and ML)
+
+#Post hoc comparisons (emmeans package)
+emmeans(DustB1, pairwise ~ LitterType|Freshness, type = "response")  #LitterType within Freshness
+emmeans(DustB1, pairwise ~ Freshness|LitterType, type = "response")  #Freshness within LitterType
+emmeans(DustB1, list(c(pairwise ~ LitterType, pairwise ~ Freshness)), type = "response") #LitterType and Freshness separate
+```
+
+
+```{r}
+#Diagnostic plots using DHARMa package
+DustB1.ressim <-simulateResiduals(DustB1)
+plot(DustB1.ressim)
+```
+
+
+### Lying resting
+
+Response variable: Lie (= Lying resting)
+
+
+Explanatory variables:
+
+- LitterType*Freshness  --> Not significant removed from final model
+
+- LitterType
+
+- Freshness
+
+- Weeks (= age)
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+
+```{r}
+#Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Lie1 <- glmer.nb(Lie ~ LitterType + Freshness +  Weeks + (1|Flock:Buffet), data = Beh)
+summary(Lie1)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(Lie1, type ="II") #Recommended for GLMM (and ML)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Lie1, list(c(pairwise ~ LitterType, pairwise ~ Freshness)), type = "response")
+```
+
+
+```{r}
+#Diagnostic plots using DHARMa package
+Lie1.ressim <-simulateResiduals(Lie1)
+plot(Lie1.ressim)
+```
+
+
+### Total birds
+
+Response variable: Total (= Total birds)
+
+
+Explanatory variables:
+
+- LitterType*Freshness  --> Not significant removed from final model
+
+- LitterType
+
+- Freshness
+
+- Weeks (= age)
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+```{r}
+#Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Total1 <- glmer.nb(Total ~ LitterType + Freshness + Weeks + (1|Flock:Buffet), data = Beh)
+summary(Total1)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(Total1, type ="II") #Recommended for GLMM (and ML)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Total1, list(c(pairwise ~ LitterType, pairwise ~ Freshness)), type = "response")
+```
+
+```{r}
+#Diagnostic plots using DHARMa package
+Total1.ressim <-simulateResiduals(Total1)
+plot(Total1.ressim)
+```
+
+
+
+## Figures of behavioural data
+
+The data used in the figures below are collected from the analyses (post hoc comparisons) above.
+These outputs are back-transformed means with 95 % confidence intervals.
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(ggpattern)
+```
+
+
+### Ground scatching figures
+
+##### Ground scratch results of LitterType (A)
+
+```{r}
+#Ground scratch results of LitterType
+GS_Litter.Df <- data.frame(Litter = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"),
+                    Response = c(1.773, 1.623, 0.901, 0.65, 1.077, 0.556, 0.403),
+                    Low.CI = c(1.288, 1.168, 0.601, 0.414, 0.736, 0.343, 0.232),
+                    High.CI = c(2.441, 2.256, 1.351, 1.02, 1.576, 0.902, 0.701),
+                    CLD = c("b", "b", "ab", "a", "ab", "a", "a"))
+
+GS_Litter.Df$Litter<- factor(GS_Litter.Df$Litter, levels = c("Peat", "30.Mixed.Peat", "Wood.shavings", "Saniterbark", "FK.Strobad", "AJ.Kross.Grov", "AJ.Kross.Fin"))
+GS_Litter.Df$Response <- as.numeric(GS_Litter.Df$Response)
+GS_Litter.Df$Low.CI <- as.numeric(GS_Litter.Df$Low.CI)
+GS_Litter.Df$High.CI <- as.numeric(GS_Litter.Df$High.CI)
+GS_Litter.Df$CLD <- factor(GS_Litter.Df$CLD, levels = c("a", "ab", "b"))
+```
+
+```{r}
+#Creating Figure of Ground scratch LitterType results
+GS_Litter.Fig <-  GS_Litter.Df %>%
+  ggplot(aes(x=Litter, y=Response)) +
+  geom_bar(   
+    aes(fill = Litter),
+    stat="identity",
+    width= 0.8,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black") + 
+  scale_fill_manual(values = colorRampPalette(c("#A46D00","#FEFCD6","#5C8E3A"))(7)) +
+  geom_errorbar(
+    aes(ymin=Low.CI, ymax=High.CI), 
+    width = 0.45, 
+    position = position_dodge(width = 0.92), 
+    colour="black", 
+    size=0.8) +
+  theme_classic(base_size = 23) +
+  geom_text(
+    aes(label = CLD, y = High.CI + 0.2), 
+    size = 6) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .1)), 
+    limits = c(0,3)) +
+  theme(
+    axis.text.x=element_text(angle=40, hjust=1, size = 18), 
+    legend.position = 'none') +
+  scale_x_discrete(labels=c("Peat" = "Peat", "30.Mixed.Peat" = "Mixed peat", "AJ.Kross.Fin" = "Fine straw", "AJ.Kross.Grov" = "Coarse straw", "Wood.shavings" = "Wood shavings", "Saniterbark" = "Bark", "FK.Strobad" = "Pellets")) + 
+  labs(x="Litter type", y="Ground scratching birds (n)")
+
+GS_Litter.Fig
+```
+
+```{r}
+#Exporting figure as JPEG 
+ggsave(filename = "Figure_GrScrat_a.jpeg", plot = GS_Litter.Fig, width = 12, height = 15 ,units = "cm", dpi=500)
+```
+
+
+##### Ground scratch results of Freshness (B)
+
+```{r}
+#Ground scratch results of Freshness
+GS_Fresh.Df <- data.frame(Fresh = c("Used", "Fresh"),
+                    Response = c(0.5, 1.55),
+                    Low.CI = c(0.379, 1.285),
+                    High.CI = c(0.66, 1.86),
+                    CLD = c("a", "b"))
+
+GS_Fresh.Df$Fresh <- factor(GS_Fresh.Df$Fresh, levels = c("Used", "Fresh"))
+GS_Fresh.Df$Response <- as.numeric(GS_Fresh.Df$Response)
+GS_Fresh.Df$Low.CI <- as.numeric(GS_Fresh.Df$Low.CI)
+GS_Fresh.Df$High.CI <- as.numeric(GS_Fresh.Df$High.CI)
+GS_Fresh.Df$CLD <- factor(GS_Fresh.Df$CLD, levels = c("a", "b"))
+```
+
+
+```{r}
+#Creating Figure of Ground scratch Freshness results
+GS_Fresh.Fig <-  GS_Fresh.Df %>%
+  ggplot(aes(x=Fresh, y=Response)) +
+  geom_bar_pattern(   
+    aes(pattern=Fresh),
+    stat="identity",
+    width= 0.8,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black",
+    fill='white',
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0.08,
+    pattern_spacing = 0.08) + 
+  scale_fill_manual(values = colorRampPalette(c("#5C8E3A","#FEFCD6","#A46D00"))(7)) +
+  geom_errorbar(
+    aes(ymin=Low.CI, ymax=High.CI), 
+    position = position_dodge(width = 0.92), 
+    width = 0.45, 
+    colour="black", 
+    size=0.8) +
+  scale_pattern_manual(values = c(Used = "circle", Fresh="none")) +
+  scale_pattern_type_manual(values = c(Used = "circle", Fresh="none")) +
+  geom_text(
+    aes(label = CLD, y = High.CI + 0.2), 
+    size = 8) +
+  theme_classic(base_size = 23) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .1)), 
+    limits = c(0,3)) +
+  theme(
+    axis.text.x=element_text(
+      angle=50, 
+      hjust=1, 
+      size = 18), 
+    legend.position = 'none') +
+  labs(x="Freshness condition", y="Ground scratching birds (n)")
+
+GS_Fresh.Fig
+```
+
+
+```{r}
+#Exporting figure as JPEG 
+ggsave(filename = "Figure_GrScrat_b.jpeg", plot = GS_Fresh.Fig, width = 10, height = 15 ,units = "cm", dpi=500)
+```
+
+
+### Dustbathing figure
+
+```{r}
+#Dustbathing results of LitterType*Freshness
+DustB.Df <- data.frame(Litter = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad", "Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"),
+                       Freshness = c("Used", "Used", "Used", "Used", "Used", "Used", "Used", "Fresh", "Fresh", "Fresh", "Fresh", "Fresh", "Fresh", "Fresh"),
+                       Pattern = c("En", "En", "En", "En", "En", "En", "En", "To", "To", "To", "To", "To", "To", "To"),
+                     Response = c(1.325, 1.464, 5.243, 0.877, 1.519, 0.553, 0.381, 8.207, 9.341, 7.348, 2.364, 3.219, 3.115, 1.338),
+                     Low.CI = c(0.636, 0.707, 2.756, 0.396, 0.735, 0.233, 0.144, 4.368, 4.986, 3.901, 1.194, 1.647, 1.603, 0.634),
+                     High.CI = c(2.76, 3.03, 9.97, 1.94, 3.14, 1.31, 1.01, 15.42, 17.5, 13.84, 4.68, 6.29, 6.05, 2.83),
+                     CLD = c("a", "a", "b", "a", "a", "a", "a", "BC", "C", "BC", "A", "ABC", "AB", "A"))
+
+DustB.Df$Litter<- factor(DustB.Df$Litter, levels = c("Peat", "30.Mixed.Peat", "Wood.shavings", "Saniterbark", "FK.Strobad", "AJ.Kross.Grov", "AJ.Kross.Fin"))
+DustB.Df$Freshness <- factor(DustB.Df$Freshness, levels = c("Used", "Fresh"))
+DustB.Df$Pattern <- factor(DustB.Df$Pattern, levels = c("En", "To"))
+DustB.Df$Response <- as.numeric(DustB.Df$Response)
+DustB.Df$Low.CI <- as.numeric(DustB.Df$Low.CI)
+DustB.Df$High.CI <- as.numeric(DustB.Df$High.CI)
+DustB.Df$CLD <- factor (DustB.Df$CLD, levels = c("a", "b", "BC", "C", "A", "AB", "ABC"))
+```
+
+
+```{r}
+#Creating Figure of Dustbathing LitterType*Freshness results
+DB.Fig <-  DustB.Df %>%
+  ggplot(aes(x=Litter, y=Response, group=Freshness)) +
+  geom_bar_pattern(   
+    aes(fill = Litter, pattern=Freshness),
+    stat="identity",
+    width= 0.8,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black",
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0.08, #0.08
+    pattern_spacing = 0.03) +  #0.05
+  scale_fill_manual(values = colorRampPalette(c("#A46D00","#FEFCD6","#5C8E3A"))(7)) +
+  scale_pattern_manual(values = c(Used = "circle", Fresh="none")) +
+  scale_pattern_type_manual(values = c(Used = "circle", Fresh="none")) +
+  geom_errorbar(
+    aes(ymin=Low.CI, ymax=High.CI), 
+    position = position_dodge(width = 0.92), 
+    width = 0.45, 
+    colour="black", 
+    size=0.8) +
+  theme_classic(base_size = 25) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .1)), 
+    limits = c(0,20), 
+    breaks = c(0, 5, 10, 15, 20)) +
+  theme(
+    axis.text.x=element_text(angle=35, hjust=1, size = 26),
+    legend.position = c(0.70, 0.92),
+    legend.direction = "horizontal",
+    legend.key.size = unit(1.5, 'cm'),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size=18)) +
+  scale_x_discrete(labels=c("Peat" = "Peat", "30.Mixed.Peat" = "Mixed peat", "AJ.Kross.Fin" = "Fine straw", "AJ.Kross.Grov" = "Coarse straw", "Wood.shavings" = "Wood shavings", "Saniterbark" = "Bark", "FK.Strobad" = "Pellets")) +
+  geom_text(
+    aes(label = CLD, y = High.CI+1), 
+    size = 7, 
+    position = position_dodge(width = 0.97)) +
+  labs(x="Litter type", y="Dustbathing birds (n)") +
+  geom_segment(aes(x = 0.6, y = 17.4, xend = 1.3, yend = 17.4)) +  #Peat line
+  geom_text(aes(x = 0.95, y = 17.5, label = "***"), size = 8) +    #Peat stars
+  geom_segment(aes(x = 1.7, y = 19.5, xend = 2.4, yend = 19.5)) +  #Mixed peat line
+  geom_text(aes(x = 2.05, y = 19.6, label = "***"), size = 8) +    #Mixed peat stars
+  geom_segment(aes(x = 3.7, y = 8, xend = 4.4, yend = 8)) +        #Bark line
+  geom_text(aes(x = 4.05, y = 8.1, label = "*"), size = 8) +       #Bark stars
+  geom_segment(aes(x = 4.7, y = 5, xend = 5.4, yend = 5)) +        #Pellets line
+  geom_text(aes(x = 5.05, y = 5.1, label = "***"), size = 8) +     #Pellets stars
+  geom_segment(aes(x = 5.7, y = 6.7, xend = 6.4, yend = 6.7)) +    #Coarse straw line
+  geom_text(aes(x = 6.05, y = 6.8, label = "*"), size = 8) +       #Coarse straw stars
+  guides(
+    pattern = guide_legend(
+      override.aes = list(fill = "white"), 
+      title = "Freshness condition"), 
+    fill = "none")
+
+DB.Fig
+```
+
+
+```{r}
+#Exporting figure as JPEG 
+ggsave(filename = "Figure_DustB.jpeg", plot = DB.Fig, width = 26, height = 20 ,units = "cm", dpi=500)
+```
+
+
+
+### Lying resting figure
+
+```{r}
+#Lying resting results of LitterType
+Lie.Df <- data.frame(Litter = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"),
+                     Pattern <- c("en", "to", "tre", "fire", "fem", "seks", "syv"),
+                     Response = c(41.30, 56.10, 54.90, 33.40, 72.60, 43.10, 22.80),
+                     Low.CI = c(26.9, 36.6, 35.8, 21.8, 47.4, 28.1, 14.9),
+                     High.CI = c(63.3, 85.9, 84.0, 51.2, 111.0, 66.0, 35.1),
+                     CLD = c("bc", "cd", "cd", "ab", "d", "bc", "a"))
+
+Lie.Df$Litter<- factor(Lie.Df$Litter, levels = c("Peat", "30.Mixed.Peat", "Wood.shavings", "Saniterbark", "FK.Strobad", "AJ.Kross.Grov", "AJ.Kross.Fin"))
+Lie.Df$Pattern <- factor(Lie.Df$Pattern, levels = c("en", "to", "tre", "fire", "fem", "seks", "syv"))
+Lie.Df$Response <- as.numeric(Lie.Df$Response)
+Lie.Df$Low.CI <- as.numeric(Lie.Df$Low.CI)
+Lie.Df$High.CI <- as.numeric(Lie.Df$High.CI)
+Lie.Df$CLD <- factor(Lie.Df$CLD, levels = c("bc", "cd", "d", "a", "ab"))
+```
+
+
+```{r}
+#Creating Figure of Lying resting LitterType results
+Lie.Fig <-  Lie.Df %>%
+  ggplot(aes(x=Litter, y=Response)) +
+  geom_bar(   
+    aes(fill = Litter),
+    stat="identity",
+    width= 0.8,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black") + 
+  scale_fill_manual(values = colorRampPalette(c("#A46D00","#FEFCD6","#5C8E3A"))(7)) +
+  geom_errorbar(
+    aes(ymin=Low.CI, ymax=High.CI), 
+    width = 0.45, 
+    position = position_dodge(width = 0.92), 
+    colour="black", 
+    size=0.8) +
+  theme_classic(base_size = 18) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .1)), 
+    limits = c(0,127), 
+    breaks = c(0, 25, 50, 75, 100, 125)) + 
+  geom_text(
+    aes(label = CLD, y = High.CI + 12), 
+    size = 6, 
+    position = position_dodge(width = 0.97)) +
+  theme(
+    axis.text.x=element_text(angle=40, hjust=1, size = 18), 
+    legend.position = 'none') +
+  scale_x_discrete(labels=c("Peat" = "Peat", "30.Mixed.Peat" = "Mixed peat", "AJ.Kross.Fin" = "Fine straw", "AJ.Kross.Grov" = "Coarse straw", "Wood.shavings" = "Wood shavings", "Saniterbark" = "Bark", "FK.Strobad" = "Pellets")) + 
+  labs(x="Litter type", y="Birds lying resting (n)")
+
+Lie.Fig
+```
+
+
+```{r}
+#Exporting figure as JPEG 
+ggsave(filename = "Figure_Lie.jpeg", plot = Lie.Fig, width = 12, height = 15 ,units = "cm", dpi=500)
+```
+
+
+### Total birds figure
+
+```{r}
+#Lying resting results of LitterType
+Total.Df <- data.frame(Litter = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"),
+                       Pattern = c("en", "to", "tre", "fire", "fem", "seks", "syv"),
+                       Response = c(56.0, 75.3, 69.9, 46.4, 88.0, 56.3, 37.0), 
+                       Low.CI = c(38.4, 51.6, 48.0, 31.8, 60.3, 38.6, 25.3),
+                       High.CI <- c(81.8, 109.8, 101.9, 67.7, 128.2, 82.1, 54.0),
+                       CLD = c("abc", "cd", "bcd", "ab", "d", "abc", "a"))
+
+Total.Df$Litter <- factor(Total.Df$Litter, levels = c("Peat", "30.Mixed.Peat", "Wood.shavings", "Saniterbark", "FK.Strobad", "AJ.Kross.Grov", "AJ.Kross.Fin"))
+Total.Df$Pattern <- factor(Total.Df$Pattern, levels = c("en", "to", "tre", "fire", "fem", "seks", "syv"))
+Total.Df$Response <- as.numeric(Total.Df$Response)
+Total.Df$Low.CI <- as.numeric(Total.Df$Low.CI)
+Total.Df$High.CI <- as.numeric(Total.Df$High.CI)
+Total.Df$CLD <- factor(Total.Df$CLD, levels = c("abc", "cd", "bcd", "ab", "d", "a"))
+```
+
+
+```{r}
+#Creating Figure of Total birds LitterType results
+Total.Fig <-  Total.Df %>%
+  ggplot(aes(x=Litter, y=Response)) +
+  geom_bar(   
+    aes(fill = Litter),
+    stat="identity",
+    width= 0.8,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black") + 
+  scale_fill_manual(values = colorRampPalette(c("#A46D00","#FEFCD6","#5C8E3A"))(7)) +
+  geom_errorbar(
+    aes(ymin=Low.CI, ymax=High.CI), 
+    width = 0.45, 
+    position = position_dodge(width = 0.92), 
+    colour="black", 
+    size=0.8) +
+  theme_classic(base_size = 18) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .1)), 
+    limits = c(0,150), 
+    breaks = c(0, 25, 50, 75, 100, 125, 150)) + 
+  geom_text(
+    aes(label = CLD, y = High.CI + 15), 
+    size = 6, 
+    position = position_dodge(width = 0.97)) +
+  theme(
+    axis.text.x=element_text(angle=40, hjust=1, size = 18), 
+    legend.position = 'none') +
+  scale_x_discrete(labels=c("Peat" = "Peat", "30.Mixed.Peat" = "Mixed peat", "AJ.Kross.Fin" = "Fine straw", "AJ.Kross.Grov" = "Coarse straw", "Wood.shavings" = "Wood shavings", "Saniterbark" = "Bark", "FK.Strobad" = "Pellets")) + 
+  labs(x="Litter type", y="Total birds (n)")
+
+Total.Fig
+```
+
+
+```{r}
+#Exporting figure as JPEG 
+ggsave(filename = "Figure_Total.jpeg", plot = Total.Fig, width = 12, height = 15, units = "cm", dpi=500)
+```
+
+
+
+## Importing Litter composition datasets 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(readxl)     #Read excel-files
+library(openxlsx)   #Create excel files
+library(tidyverse)  #Time without date, ggplot2, dplyr
+```
+
+```{r}
+#Only Litter composition data
+LitterComp <- read_excel("BuffetOfLitters_Datasets.xlsx", sheet = "LitterComposition", na = ".")
+
+#Specifying variables
+LitterComp$Flock <- factor(LitterComp$Flock, levels = c("0", "1", "2"))
+LitterComp$LitterType <- factor(LitterComp$LitterType, levels = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"))
+LitterComp$Freshness <- factor(LitterComp$Freshness, levels = c("Used", "Fresh"))
+LitterComp$Replicate <- factor(LitterComp$Replicate, levels = c("1", "2", "3"))
+LitterComp$`<0.2` <- as.numeric(LitterComp$`<0.2`)
+LitterComp$`0.2-0.5` <- as.numeric(LitterComp$`0.2-0.5`)
+LitterComp$`0.6-1.0` <- as.numeric(LitterComp$`0.6-1.0`)
+LitterComp$`1.1-2.0` <- as.numeric(LitterComp$`1.1-2.0`)
+LitterComp$`2.1-2.8` <- as.numeric(LitterComp$`2.1-2.8`)
+LitterComp$`2.9-3.6` <- as.numeric(LitterComp$`2.9-3.6`)
+LitterComp$`3.7-4.0` <- as.numeric(LitterComp$`3.7-4.0`)
+LitterComp$`4.1-5.6` <- as.numeric(LitterComp$`4.1-5.6`)
+LitterComp$`>5.6` <- as.numeric(LitterComp$`>5.6`)
+LitterComp$small <- as.numeric(LitterComp$small)
+LitterComp$medium <- as.numeric(LitterComp$medium)
+LitterComp$large <- as.numeric(LitterComp$large)
+LitterComp$mean <- as.numeric(LitterComp$mean)
+```
+
+```{r}
+#Behaviour data and Litter composition data combined
+BL <- read_excel("BuffetOfLitters_Datasets.xlsx", sheet = "BehaviourLitter", na = ".")
+
+#Specifying variables
+BL$Flock <- factor(BL$Flock, levels = c("1", "2"))
+BL$Days <- as.numeric(BL$Days)
+BL$Weeks <- as.numeric(BL$Weeks)
+BL$LitterType <- factor(BL$LitterType, levels = c("Peat", "30.Mixed.Peat", "AJ.Kross.Fin", "AJ.Kross.Grov", "Wood.shavings", "Saniterbark", "FK.Strobad"))
+BL$Buffet <- factor(BL$Buffet, levels = c("A", "B"))
+BL$Freshness <- factor(BL$Freshness, levels = c("Used", "Fresh"))
+BL$Total <- as.numeric(BL$Total)
+BL$Stand <- as.numeric(BL$Stand)
+BL$Lie <- as.numeric(BL$Lie)
+BL$DustB <- as.numeric(BL$DustB)
+BL$GrScrat <- as.numeric(BL$GrScrat)
+BL$p.small <- as.numeric(BL$p.small)
+BL$p.medium <- as.numeric(BL$p.medium)
+BL$p.large <- as.numeric(BL$p.large)
+```
+
+
+### Splitting the datasets into to based on freshness condition:
+
+```{r}
+#Creating dataset with results from only Used samples (by filtering)
+LitterComp_Used <- LitterComp %>% 
+  filter(Freshness == "Used")
+
+#Creating dataset with results from only Fresh samples (by filtering)
+LitterComp_Fresh <- LitterComp %>% 
+  filter(Freshness == "Fresh")
+```
+
+```{r}
+#Creating dataset with results from only Used samples (by filtering)
+BL_Used <- BL %>% 
+  filter(Freshness == "Used")
+
+#Creating dataset with results from only Fresh samples (by filtering)
+BL_Fresh <- BL %>% 
+  filter(Freshness == "Fresh")
+```
+
+
+## Analysis of Litter compsition data
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(car)       #for Anova-function
+library(DHARMa)    #Residual Diagnostics for Mixed Models (e.g. over- and under dispersion and zero-inflation) both tests and plots
+library(lme4)      #Recommended for mixed models 
+library(lmerTest)  #Provide p-values for lme4
+library(emmeans)   #Get least squares means, pairwise comparisons and CI
+```
+
+
+### Mean weight (g) per litter type per freshness condition
+
+Response variable: mean (= mean weight)
+
+Explanatory variable: LitterType
+
+Distribution: Gaussian
+
+
+```{r}
+#Fresh data: Linear model with gaussian distribution (base R)
+Mean_Fresh <- lm(mean ~ LitterType, data = LitterComp_Fresh)
+summary(Mean_Fresh)
+
+#ANOVA to find overall effect of LitterType (car package)
+Anova(Mean_Fresh, type ="II")
+
+#Post hoc comparisons (emmeans package)
+emmeans(Mean_Fresh, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+Mean_Fresh.ressim <-simulateResiduals(Mean_Fresh)
+plot(Mean_Fresh.ressim)
+```
+
+
+```{r}
+#Used data: Linear model with gaussian distribution (base R)
+Mean_Used <- lm(mean ~ LitterType, data = LitterComp_Used)
+summary(Mean_Used)
+
+#ANOVA to find overall effect of LitterType (car package)
+Anova(Mean_Used, type ="II")
+
+#Post hoc comparisons (emmeans package)
+emmeans(Mean_Used, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+Mean_Used.ressim <-simulateResiduals(Mean_Used)
+plot(Mean_Used.ressim)
+```
+
+
+### Litter composition on behaviour
+
+#### Ground Scratch
+
+Response variable: GrScrat (= Ground scratch)
+
+
+Explanatory variables:
+
+- p.small
+
+- p.large
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+```{r}
+#Used data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+GrScrat2 <- glmer.nb(GrScrat ~ p.small + p.large + (1|Flock:Buffet), data = BL_Used)
+summary(GrScrat2)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(GrScrat2, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots using DHARMa package
+GrScrat2.ressim <-simulateResiduals(GrScrat2)
+plot(GrScrat2.ressim)
+```
+
+
+```{r}
+#Fresh data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+GrScrat3 <- glmer.nb(GrScrat ~ p.small + p.large + (1|Flock:Buffet), data = BL_Fresh)
+summary(GrScrat3)
+
+#ANOVA to find overall effects of p.small and p.large (car package)
+Anova(GrScrat3, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+GrScrat3.ressim <-simulateResiduals(GrScrat3)
+plot(GrScrat3.ressim)
+```
+
+
+
+#### Dustbathing
+
+Response variable: DustB (= Dustbathing)
+
+Explanatory variables:
+
+- p.small
+
+- p.large
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+```{r}
+#Used data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+DustB2 <- glmer.nb(DustB ~ p.small + p.large + (1|Flock:Buffet), data = BL_Used)
+summary(DustB2)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(DustB2, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots using DHARMa package
+DustB2.ressim <-simulateResiduals(DustB2)
+plot(DustB2.ressim)
+```
+
+
+```{r}
+#Fresh data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+DustB3 <- glmer.nb(DustB ~ p.small + p.large + (1|Flock:Buffet), data = BL_Fresh)
+summary(DustB3)
+
+#ANOVA to find overall effects of p.small and p.large (car package)
+Anova(DustB3, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+DustB3.ressim <-simulateResiduals(DustB3)
+plot(DustB3.ressim)
+```
+
+
+#### Lying resting
+
+Response variable: Lie (= Lying resting)
+
+
+Explanatory variables:
+
+- p.small
+
+- p.large
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+```{r}
+#Used data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Lie2 <- glmer.nb(Lie ~ p.small + p.large + (1|Flock:Buffet), data = BL_Used)
+summary(Lie2)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(Lie2, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots using DHARMa package
+Lie2.ressim <-simulateResiduals(Lie2)
+plot(Lie2.ressim)
+```
+
+
+```{r}
+#Fresh data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Lie3 <- glmer.nb(Lie ~ p.small + p.large + (1|Flock:Buffet), data = BL_Fresh)
+summary(Lie3)
+
+#ANOVA to find overall effects of p.small and p.large (car package)
+Anova(Lie3, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+Lie3.ressim <-simulateResiduals(Lie3)
+plot(Lie3.ressim)
+```
+
+
+#### Total birds
+
+Response variable: Total (= Total birds)
+
+
+Explanatory variables:
+
+- p.small
+
+- p.large
+
+
+Random effect: Buffet nested within flock
+
+Distribution: Negative binomial (gave better diagnostics than Poisson distribution)
+
+```{r}
+#Used data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Total2 <- glmer.nb(Total ~ p.small + p.large + (1|Flock:Buffet), data = BL_Used)
+summary(Total2)
+
+#ANOVA to find overall effects of LitterType and Freshness (car package)
+Anova(Total2, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots using DHARMa package
+Total2.ressim <-simulateResiduals(Total2)
+plot(Total2.ressim)
+```
+
+
+```{r}
+#Fresh data: Generalised linear mixed model with negative binomial distribution (lme4 & lmerTest packages)
+Total3 <- glmer.nb(Total ~ p.small + p.large + (1|Flock:Buffet), data = BL_Fresh)
+summary(Total3)
+
+#ANOVA to find overall effects of p.small and p.large (car package)
+Anova(Total3, type ="II") #Recommended for GLMM (and ML)
+```
+
+```{r}
+#Diagnostic plots (DHARMa package)
+Total3.ressim <-simulateResiduals(Total3)
+plot(Total3.ressim)
+```
+
+
+## Figure of Litter composition data
+
+#### Data collection
+
+The Figure for Litter composition (Figure 5 in the paper) display the least mean squares ± 95 % Confidence Intervals collected from Linear models (with Gaussian distribution). The models can be found below, but the results are also compiled in an Excel sheet (Figure_LitterComposition) in the "BuffetOfLitters_Datasets.xlsx" file.
+
+
+Response variables: small, medium and large
+
+Explanatory variable: LitterType
+
+Distribution: Gaussian
+
+
+##### Small particle size results (weight in grams)
+```{r}
+#Fresh data: Linear model with gaussian distribution (base R)
+Small_Fresh <- lm(small ~ LitterType, data = LitterComp_Fresh)
+summary(Small_Fresh)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Small_Fresh, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+```{r}
+#Used data: Linear model with gaussian distribution (base R)
+Small_Used <- lm(small ~ LitterType, data = LitterComp_Used)
+summary(Small_Used)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Small_Used, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+
+##### Medium particle size results (weight in grams)
+```{r}
+#Fresh data: Linear model with gaussian distribution (base R)
+Medium_Fresh <- lm(medium ~ LitterType, data = LitterComp_Fresh)
+summary(Medium_Fresh)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Medium_Fresh, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+```{r}
+#Used data: Linear model with gaussian distribution (base R)
+Medium_Used <- lm(medium ~ LitterType, data = LitterComp_Used)
+summary(Medium_Used)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Medium_Used, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+
+##### Large particle size results (weight in grams)
+```{r}
+#Fresh data: Linear model with gaussian distribution (base R)
+Large_Fresh <- lm(large ~ LitterType, data = LitterComp_Fresh)
+summary(Large_Fresh)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Large_Fresh, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+```{r}
+#Used data: Linear model with gaussian distribution (base R)
+Large_Used <- lm(large ~ LitterType, data = LitterComp_Used)
+summary(Large_Used)
+
+#Post hoc comparisons (emmeans package)
+emmeans(Large_Used, list(c(pairwise ~ LitterType)), type = "response")
+```
+
+
+#### Importing compiled Litter Composition results
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(readxl)     #Read excel-files
+library(openxlsx)   #Create excel files
+library(tidyverse)  #Time without date, ggplot2, dplyr
+```
+
+```{r}
+#Only Litter composition data
+Fractions <- read_excel("BuffetOfLitters_Datasets.xlsx", sheet = "Figure_LitterComposition", na = ".")
+
+#Specifying variables
+Fractions$Fraction<- factor(Fractions$Fraction, levels = c("S", "M", "L"))
+Fractions$LitterType <- factor(Fractions$LitterType, levels = c("Peat", "Mixed peat", "Wood shavings", "Bark", "Pellets", "Coarse straw", "Fine straw"))
+Fractions$Freshness <- factor(Fractions$Freshness, levels = c("Fresh", "Used"))
+Fractions$Weight <- as.numeric(Fractions$Weight)
+Fractions$lower.CL <- as.numeric(Fractions$lower.CL)
+Fractions$upper.CL <- as.numeric(Fractions$upper.CL)
+```
+
+
+#### Creating Litter Composition figure
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(ggpattern)
+```
+
+
+```{r}
+Figure.LitterComp <-  Fractions %>%
+  ggplot(aes(x=Fraction, y=Weight, group=Freshness)) +
+  geom_bar_pattern(   
+    aes(fill = LitterType, pattern=Freshness),
+    stat="identity",
+    width= 0.82,
+    position = position_dodge(width = 0.92),
+    alpha=0.85,
+    color="black",
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0.05,
+    pattern_spacing = 0.15,
+    pattern_key_scale_factor = 0.25) + 
+  scale_fill_manual(values = colorRampPalette(c("#A46D00","#FEFCD6","#5C8E3A"))(7)) +
+  scale_pattern_manual(values = c(Used = "circle", Fresh="none")) +
+  scale_pattern_type_manual(values = c(Used = "circle", Fresh="none")) +
+  geom_errorbar(
+    aes(ymin=lower.CL, ymax=upper.CL), 
+    position = position_dodge(width = 0.92), 
+    width = 0.45, 
+    colour="black", 
+    size=0.7) +
+  theme_classic(base_size = 25) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0)), # Add 0% space on the y-axis below the box plots # Add 0% space on the y-axis above the box plots
+    limits = c(-0.2, 50.8)) + #Max and min value of graph
+    #breaks = c(0,50 )) + #Ticks on y-axis
+  theme(
+    axis.text.x=element_text(size = 21), 
+    legend.position = "top",  
+    legend.margin=margin(0,0,0,0),
+    legend.box.margin=margin(-10,10,-10,10),
+    legend.direction = "horizontal",
+    legend.key.size = unit(1.5, 'cm'),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size=18),
+    panel.spacing.x = unit(0.1, "cm"),
+    panel.spacing.y = unit(0.8, "cm"),
+    panel.background = element_rect(fill = NA, color = "black", size = 0.5),
+    strip.background = element_blank()) +
+  guides(
+    pattern = guide_legend(
+      override.aes = list(fill = "white"), 
+      title = "Freshness condition"), 
+    fill = "none") +
+  facet_grid(cols = vars(LitterType), rows= vars(Freshness)) +
+  labs(x="Particle size", y="Amount (g)")
+
+Figure.LitterComp
+```
+
